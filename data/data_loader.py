@@ -16,25 +16,51 @@ class MnistLoader:
     def _is_in_labels_cache(self, is_train):
         return self.train_labels if is_train else self.test_labels
 
-    def get_training_set(self):
-        images = self._get_images_from_file(os.path.join(self.base_path, 'mnist/mnist-train-images-ubyte'))
-        labels = self._get_labels_from_file(os.path.join(self.base_path, 'mnist/mnist-train-labels-ubyte'))
-        if not len(images) == len(labels):
-            print('The count of images is '), len(images)
-            print('The count of labels is '), len(labels)
+    def get_training_set(self, grayscale=False):
+        if self.train_images and self.train_labels:
+            return self.train_images, self.train_labels
+        self.train_images = self._get_images_from_file(os.path.join(self.base_path, 'mnist/mnist-train-images-ubyte'))
+        self.train_labels = self._get_labels_from_file(os.path.join(self.base_path, 'mnist/mnist-train-labels-ubyte'))
+        if not len(self.train_images) == len(self.train_labels):
+            print('The count of images is '), len(self.train_images)
+            print('The count of labels is '), len(self.train_labels)
             raise Exception('The count of images doesn\'t equals with labels!')
-        return images, labels
+        if not grayscale:
+            return self.train_images, self.train_labels
+        else:
+            for image in self.train_images:
+                shape = np.shape(image)
+                for i in range(shape[0]):
+                    for j in range(shape[1]):
+                        # image[i][j] = 0 if image[i][j] == 0 else 1
+                        value = image[i][j]
+                        if value == 255 or value == 0:
+                            value -= 1
+                        image[i][j] = (int)(85 + value) / 85
+        return self.train_images, self.train_labels
 
-    
-    def get_test_set(self):
-        images = self._get_images_from_file('./mnist/mnist-test-10k-images-ubyte')
-        labels = self._get_labels_from_file('./mnist/mnist-test-10k-labels-ubyte')
-        if not len(images) == len(labels):
-            print('The count of test-images is '), len(images)
-            print('The count of test-labels is '), len(labels)
+    def get_test_set(self, grayscale=False):
+        if self.test_images and self.test_labels:
+            return self.test_images, self.test_labels
+        self.test_images = self._get_images_from_file(os.path.join(self.base_path, 'mnist/mnist-test-10k-images-ubyte'))
+        self.test_labels = self._get_labels_from_file(os.path.join(self.base_path, 'mnist/mnist-test-10k-labels-ubyte'))
+        if not len(self.test_images) == len(self.test_labels):
+            print('The count of test-images is '), len(self.test_images)
+            print('The count of test-labels is '), len(self.test_labels)
             raise Exception('The count of test-images doesn\'t equals with test-labels!')
-        return images, labels
-
+        if not grayscale:
+            return self.test_images, self.test_labels
+        else:
+            for image in self.test_images:
+                shape = np.shape(image)
+                for i in range(shape[0]):
+                    for j in range(shape[1]):
+                        # image[i][j] = 0 if image[i][j] == 0 else 1
+                        value = image[i][j]
+                        if value == 255 or value == 0:
+                            value -= 1
+                        image[i][j] = (int)(85 + value) / 85
+        return self.test_images, self.test_labels
 
     def get_all_set(self):
         train_images, train_labels = self.get_training_set()
@@ -70,4 +96,6 @@ class MnistLoader:
         label_file.close()
         return labels
 
+
+DEFAULT_LOADER = MnistLoader()
 
