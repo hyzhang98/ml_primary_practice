@@ -7,6 +7,7 @@ import random
 import pickle
 import time
 from math import exp
+import gc
 from data.data_loader import *
 
 
@@ -64,6 +65,8 @@ class SupportVectorMachine:
             return
         self.start_SMO()
         self._save_params()
+        del self.error_cache[:]
+        self.kernel_value.clear()
 
     def start_SMO(self):
         print('%d: start SMO...' % self.main_label)
@@ -72,6 +75,8 @@ class SupportVectorMachine:
                 index1 = i
                 index2 = self._choose_second_alphas(index1)
                 self.step(index1, index2)
+                del index1
+                del index2
             print('%d: first loop at index %d' % (self.main_label, i))
         for i in range(self.training_set_size):
             if 0 < self.alphas[i] < self.SOFT_LIMIT and not self._is_obey_KKT(i):
@@ -104,11 +109,13 @@ class SupportVectorMachine:
         e1 = self._get_error(index)
         result = 0
         t = 0
+        temp = 0
         for i in range(self.training_set_size):
             temp = abs(e1 - self._get_error(i))
             if temp > t:
                 t = temp
                 result = i
+        del e1, t, temp
         return result
 
     def _get_error(self, index):
@@ -152,21 +159,24 @@ class SupportVectorMachine:
             error = self.error_cache[i] + y1 * self._K(index1, i) * (new_alpha1 - alpha1) + \
                     y2 * self._K(index2, i) * (new_alpha2 - alpha2) - self.b + old_b
             self.error_cache[i] = error
+            del error
             # self.error_cache[i] = self._get_training_set_predict_value(i) - self._get_label(i)
+        del alpha1, alpha2, e1, e2, y1, y2, L, H, C, new_alpha1, new_alpha2, old_b, b1, b2, eta
 
     def _K(self, index1, index2):
-        if index1 > index2:
-            t = index1
-            index1 = index2
-            index2 = t
-        key = (index1, index2)
-        value = self.kernel_value.get(key)
-        if value is not None:
-            return value
+        # if index1 > index2:
+        #     t = index1
+        #     index1 = index2
+        #     index2 = t
+        # key = (index1, index2)
+        # value = self.kernel_value.get(key)
+        # if value is not None:
+        #     del key
+        #     return value
         image_alpha = self.train_images[index1]
         image_beta = self.train_images[index2]
         value = self._gaussian_kernel(image_alpha, image_beta)
-        self.kernel_value[key] = value
+        # self.kernel_value[key] = value
         return value
 
     def _kernel_function(self, image_alpha, image_beta):
@@ -260,5 +270,6 @@ def predict(svms, sample):
     return result
 
 if __name__ == '__main__':
+    # gc.set_debug(gc.DEBUG_LEAK)
     train_and_test()
 
