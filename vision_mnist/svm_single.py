@@ -1,12 +1,14 @@
 if __name__ == '__main__':
     import sys
-    sys.path.append('/Users/hyzhang/MachineLearning/python/primary_practice')
+    sys.path.append('/Users/hyzhang/MachineLearning/python/primary_practice/vision_mnist/')
+    sys.path.append('/Users/hyzhang/MachineLearning/python/primary_practice/')
 import matplotlib.pyplot as plt
 import numpy
 import random
 import pickle
 import time
 from math import exp
+import gc
 from data.data_loader import *
 
 
@@ -23,7 +25,9 @@ class SupportVectorMachine:
         self._get_training_set()
         self.training_set_size = len(self.train_images)
         self._init_params()
-        # self._init_error_cache()加快速度
+        # self._init_error_cache()
+        self._init_kernel_value()
+        # self._init_predict_cache()
         self.b = 0
 
     def _get_training_set(self):
@@ -45,6 +49,21 @@ class SupportVectorMachine:
         for i in range(self.training_set_size):
             self.error_cache.append(-self._get_label(i))
 
+    def _init_kernel_value(self):
+        print('%d: start init kernel matrix...' % self.main_label)
+        self.kernel_value = {}
+        # self.kernel_value = []
+        # for i in range(self.training_set_size):
+        #     item = []
+        #     for j in range(self.training_set_size):
+        #         item.append(-1)
+        #     self.kernel_value.append(item)
+
+    def _init_predict_cache(self):
+        self._predict_cache = []
+        for i in range(self.training_set_size):
+            self._predict_cache.append(0)
+
     def start(self):
         alphas, b = self._try_read_params()
         if alphas:
@@ -54,6 +73,7 @@ class SupportVectorMachine:
         self.start_SMO()
         self._save_params()
         # del self.error_cache[:]
+        self.kernel_value.clear()
 
     def start_SMO(self):
         print('%d: start SMO...' % self.main_label)
@@ -77,7 +97,7 @@ class SupportVectorMachine:
                 self.non_bound_set.remove(index1)
             if not self._is_obey_KKT(index2) and 0 < self.alphas[index2] < self.SOFT_LIMIT:
                 self.non_bound_set.append(index2)
-            print('%d: The size of non-bound-set is %d, b is %.6f, index1 is %d, index2 is %d' %(self.main_label, len(self.non_bound_set), self.b, index1, index2))
+            print('%d: The size of non-bound-set is %d, b is %d, index1 is %d, index2 is %d' %(self.main_label, len(self.non_bound_set), self.b, index1, index2))
 
     def _is_obey_KKT(self, index):
         y = self._get_label(index)
@@ -103,6 +123,8 @@ class SupportVectorMachine:
         #         t = temp
         #         result = i
         # del e1, t, temp
+        # end = time.time()
+        # print('choice of second alpha time is %f s' % (end - start))
         result = index
         while result == index:
             result = random.randint(0, self.training_set_size - 1)
@@ -113,6 +135,7 @@ class SupportVectorMachine:
         # return self.error_cache[index]
 
     def step(self, index1, index2):
+        start = time.time()
         alpha1 = self.alphas[index1]
         alpha2 = self.alphas[index2]
         y1 = self._get_label(index1)
@@ -146,14 +169,21 @@ class SupportVectorMachine:
             self.b = b2
         else:
             self.b = (b1 + b2) / 2
-        # 加速
+        mid = time.time()
         # for i in range(self.training_set_size):
         #     error = self.error_cache[i] + y1 * self._K(index1, i) * (new_alpha1 - alpha1) + \
         #             y2 * self._K(index2, i) * (new_alpha2 - alpha2) - self.b + old_b
         #     self.error_cache[i] = error
         #     del error
-            # self.error_cache[i] = self._get_training_set_predict_value(i) - self._get_label(i)
+
+        # for i in range(self.training_set_size):
+        #     value = self._predict_cache[i] + (new_alpha1 - alpha1) * y1 * self._K(index1, i) + \
+        #             (new_alpha2 - alpha2) * y2 * self._K(index2, i) - self.b + old_b
+        #     self._predict_cache[i] = value
         del alpha1, alpha2, e1, e2, y1, y2, L, H, C, new_alpha1, new_alpha2, old_b, b1, b2, eta
+        end = time.time()
+        # print('update error time is %f s' % (end - mid))
+        # print('step time is %f s' % (end - start))
 
     def _K(self, index1, index2):
         # if index1 > index2:
@@ -183,6 +213,7 @@ class SupportVectorMachine:
         return 1 if self.train_labels[index] == self.main_label else -1
 
     def _get_training_set_predict_value(self, index):
+        # return self._predict_cache[index]
         result = 0
         for i in range(self.training_set_size):
             if self.alphas[i] == 0:
@@ -215,53 +246,18 @@ class SupportVectorMachine:
         return obj[0], obj[1]
 
 
-def train_and_test():
+def train():
     start = time.time()
     print('Reading Training Set...')
-    svms = []
     loader = DEFAULT_LOADER
-    for main_label in range(10):
-        svm = SupportVectorMachine(loader, main_label)
-        svm.start()
-        svms.append(svm)
+    svm = SupportVectorMachine(loader, 6)
+    svm.start()
     print('End training')
-    print('Testing...')
-    test_images, test_labels = loader.get_test_set(True)
-    count = len(test_images)
-    shape = numpy.shape(test_images[0])
-    size = shape[0] * shape[1]
-    right_count = 0
-    for i in range(count):
-        image = test_images[i]
-        test_images[i] = image.reshape(size, 1)
-    for i in range(count):
-        image = test_images[i]
-        result = predict(svms, image)
-        if result == test_labels[i]:
-            right_count += 1
     end = time.time()
-    print('The size of Test-Set is %d, and the count of right predictions is %d. The accuracy rate is %.2f%%' % (count, right_count, right_count * 100 / count))
     print('End within %.2f min' % ((end - start) / 60))
 
 
-def predict(svms, sample):
-    dist = -1
-    result = -1
-    for i in range(10):
-        label = svms[i].predict(sample)
-        if label >= 0:
-            if label > dist:
-                dist = label
-                result = i
-    if dist == -1:
-        for i in range(10):
-            label = svms[i].predict(sample)
-            if label > dist:
-                dist = label
-                result = i
-    return result
-
 if __name__ == '__main__':
     # gc.set_debug(gc.DEBUG_LEAK)
-    train_and_test()
+    train()
 
