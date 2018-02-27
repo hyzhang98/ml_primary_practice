@@ -225,24 +225,23 @@ def train_and_test():
         svm.start()
         svms.append(svm)
     print('End training')
-    # 统计训练误差
-    # print('Calculating training error...')
-    # train_images, train_labels = loader.get_training_set(True)
-    # count = len(train_images)
-    # shape = numpy.shape(train_images[0])
-    # size = shape[0] * shape[1]
-    # right_count = 0
-    # for i in range(count):
-    #     image = train_images[i]
-    #     train_images[i] = image.reshape(size, 1)
-    # for i in range(count):
-    #     if i % 100 == 0:
-    #         print(i)
-    #     image = train_images[i]
-    #     result = predict(svms, image)
-    #     if result == train_labels[i]:
-    #         right_count += 1
-    # print('The size of Train-Set is %d, and the count of right predictions is %d. The accuracy rate is %.2f%%' % (count, right_count, right_count * 100 / count))
+    print('Calculating training error...')
+    train_images, train_labels = loader.get_training_set(True)
+    count = len(train_images)
+    shape = numpy.shape(train_images[0])
+    size = shape[0] * shape[1]
+    right_count = 0
+    for i in range(count):
+        image = train_images[i]
+        train_images[i] = image.reshape(size, 1)
+    print(count)
+    for i in range(count):
+        print(i)
+        image = train_images[i]
+        result = predict(svms, image)
+        if result == train_labels[i]:
+            right_count += 1
+    print('The size of Train-Set is %d, and the count of right predictions is %d. The accuracy rate is %.2f%%' % (count, right_count, right_count * 100 / count))
     print('Testing...')
     test_images, test_labels = loader.get_test_set(True)
     count = len(test_images)
