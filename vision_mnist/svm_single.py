@@ -16,9 +16,10 @@ class SupportVectorMachine:
     def __init__(self, loader, main_label=0):
         print('%d: start init...' % main_label)
         self.non_bound_set = []
+        self._support_vectors = []
         self.loader = loader
-        self.PARAMS_FILE = 'svm_params' + str(main_label)
-        self.SOFT_LIMIT = 1
+        self.PARAMS_FILE = 'svm_params/svm_params' + str(main_label)
+        self.SOFT_LIMIT = 10
         self.main_label = main_label
         self.ERROR = 0.001
         self.sigma = 28
@@ -84,9 +85,11 @@ class SupportVectorMachine:
                 self.step(index1, index2)
                 del index1
                 del index2
-            print('%d: first loop at index %d' % (self.main_label, i))
+            if i % 1000 == 0:
+                print('%d: first loop at index %d' % (self.main_label, i))
         for i in range(self.training_set_size):
-            if 0 < self.alphas[i] < self.SOFT_LIMIT and not self._is_obey_KKT(i):
+            # if 0 < self.alphas[i] < self.SOFT_LIMIT and not self._is_obey_KKT(i):
+            if not self._is_obey_KKT(i):
                 self.non_bound_set.append(i)
         print('%d: start alphas\' loop...' % self.main_label)
         while self.non_bound_set:
@@ -95,9 +98,12 @@ class SupportVectorMachine:
             self.step(index1, index2)
             if self._is_obey_KKT(index1):
                 self.non_bound_set.remove(index1)
-            if not self._is_obey_KKT(index2) and 0 < self.alphas[index2] < self.SOFT_LIMIT:
+            # if not self._is_obey_KKT(index2) and 0 < self.alphas[index2] < self.SOFT_LIMIT:
+            if not self._is_obey_KKT(index2):
                 self.non_bound_set.append(index2)
-            print('%d: The size of non-bound-set is %d, b is %d, index1 is %d, index2 is %d' %(self.main_label, len(self.non_bound_set), self.b, index1, index2))
+            count = len(self.non_bound_set)
+            if count % 1000 == 0:
+                print('%d: The size of non-bound-set is %d, b is %d, index1 is %d, index2 is %d' %(self.main_label, count, self.b, index1, index2))
 
     def _is_obey_KKT(self, index):
         y = self._get_label(index)
@@ -223,10 +229,15 @@ class SupportVectorMachine:
 
     def predict(self, sample):
         result = 0
-        for i in range(self.training_set_size):
-            if self.alphas[i] == 0:
-                continue
-            result += self.alphas[i] * self._get_label(i) * self._kernel_function(self.train_images[i], sample)
+        if not self._support_vectors:
+            for i in range(self.training_set_size):
+                if self.alphas[i] != 0:
+                    self._support_vectors.append(i)
+        count = len(self._support_vectors)
+        for i in range(count):
+            index = self._support_vectors[i]
+            result += self.alphas[index] * self._get_label(index) * self._kernel_function(self.train_images[index],
+                                                                                          sample)
         return result - self.b
 
     def _save_params(self):
@@ -247,17 +258,35 @@ class SupportVectorMachine:
 
 
 def train():
+    num = 6
     start = time.time()
     print('Reading Training Set...')
     loader = DEFAULT_LOADER
-    svm = SupportVectorMachine(loader, 6)
+    svm = SupportVectorMachine(loader, num)
     svm.start()
     print('End training')
+    print('Start calculating the test error...')
+    test_images, test_labels = loader.get_test_set(True)
+    count = len(test_images)
+    shape = numpy.shape(test_images[0])
+    size = shape[0] * shape[1]
+    right_count = 0
+    for i in range(count):
+        image = test_images[i]
+        test_images[i] = image.reshape(size, 1)
+    for i in range(count):
+        image = test_images[i]
+        dist = svm.predict(image)
+        if dist >= 0 and test_labels[i] == num:
+            right_count += 1
+        elif dist <= 0 and test_labels[i] != num:
+            right_count += 1
+    print('The size of Test-Set is %d, and the count of right predictions is %d. The accuracy rate is %.2f%%' % (
+        count, right_count, right_count * 100 / count))
     end = time.time()
     print('End within %.2f min' % ((end - start) / 60))
 
 
 if __name__ == '__main__':
-    # gc.set_debug(gc.DEBUG_LEAK)
     train()
 
