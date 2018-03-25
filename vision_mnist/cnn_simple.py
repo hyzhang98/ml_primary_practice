@@ -6,6 +6,7 @@ import numpy as np
 import math
 import pickle
 import os
+import time
 
 
 PARAMS_FILE = 'nn_params'
@@ -28,21 +29,42 @@ output_bias = (np.random.random((10, 1)) - 0.5) / 10
 
 
 def train():
-    loader = data_loader.MnistLoader()
-    training_set, training_labels = loader.get_training_set(True)
+    print('Try reading the params...')
     if try_read_params():
-        return
-    batch_size = 50
-    count = len(training_labels) / batch_size
+        print('Using old parameters')
+    loader = data_loader.MnistLoader()
+    print('Reading the data set...')
+    training_set, training_labels = loader.get_training_set(True)
+    print('Start trainging...')
+    batch_size = 100
+    count = int(len(training_labels) / batch_size)
     alpha = 0.1
-    for i in range(count):
-        if i % 25 == 0:
-            alpha -= 0.001
-        index = i * batch_size
-        images = training_set[index: batch_size]
-        labels = training_labels[index: batch_size]
+    for i in range(10):
+        start = time.time()
+        # if i % 100:
+        print(i)
+        index = (i + 3) * batch_size
+        images = training_set[index: index + batch_size]
+        labels = training_labels[index: index + batch_size]
+        # image = np.random.randint(0, 5, (1, 28, 28))
+        # images = np.array([image])
+        # labels = np.array([1])
         bp(images, labels, alpha)
+        print('Wasted time is %d' % ((time.time() - start)/60))
+        # alpha -= 0.006
     save()
+    
+
+def test():
+    loader = data_loader.MnistLoader()
+    test_set, test_labels = loader.get_test_set()
+    count = len(test_set)
+    right_count = 0
+    for i in range(count):
+        prediction = predict(test_set[i], test_labels[i])
+        if prediction == test_labels[i]:
+            right_count += 1
+    print('The accuracy is %f' %(right_count / count))
 
 
 def bp(images, labels, alpha):
@@ -61,6 +83,7 @@ def bp(images, labels, alpha):
     pool2_result = []
     fc_act_result = []
     output = []
+    # print('Start forward propagation')
     for i in range(count):
         image = images[i]
         conv1_result = convolution(image, kernel1, bias1)
@@ -77,7 +100,7 @@ def bp(images, labels, alpha):
     output_error = np.empty(10)
     for j in range(count):
         for i in range(10):
-            output_error[i] = (math.log(output[j][i]) + 1 if i == labels[j] else 0) * (1 / count)
+            output_error[i] = (math.log(output[j][i]) + (1 if i == labels[j] else 0)) * (1 / count)
     output_weight_gradient = []
     output_bias_gradient = []
     fc_weight_gradient = []
@@ -86,6 +109,7 @@ def bp(images, labels, alpha):
     bias2_gradient = []
     kernel1_gradient = []
     bias1_gradient = []
+    # print('Start back propagation')
     for i in range(count):
         output_error = output_error.reshape(10, 1)  # 10 * 1
         output_weight_gradient.append(np.matmul(output_error, fc_act_result[i].T))
@@ -95,11 +119,11 @@ def bp(images, labels, alpha):
         fc_weight_gradient.append(np.matmul(fc_error, vector.T))
         fc_bias_gradient.append(fc_error)
         pool2_error = np.matmul(fc_weights.T, fc_error)  # (7 * 7 * 64) * 1
-        conv2_error = get_conv_error(conv2_act_result[i], pool2_result[i], pool2_error)  # 64 * 14 * 14
+        conv2_error = get_conv_error(conv2_act_result[i], pool2_result[i], pool2_error) * get_derivative(conv2_act_result[i])  # 64 * 14 * 14
         kernel2_gradient.append(get_kernel_derivative(conv2_error, pool1_result[i]))  # 64 * 32 * 3 * 3
         bias2_gradient.append(conv2_error.reshape(14 * 14 * 64))
         pool1_error = back_conv(conv2_error, flip(kernel2))  # 32 * 14 * 14
-        conv1_error = get_conv_error(conv1_act_result[i], pool1_result[i], pool1_error)  # 32 * 28 * 28
+        conv1_error = get_conv_error(conv1_act_result[i], pool1_result[i], pool1_error) * get_derivative(conv1_act_result[i])  # 32 * 28 * 28
         kernel1_gradient.append(get_kernel_derivative(conv1_error, images[i]))  # 32 * 1 * 28 * 28
         bias1_gradient.append(conv1_error.reshape(28 * 28 * 32))
     output_weights_g = np.mean(output_weight_gradient, axis=0)
@@ -110,6 +134,7 @@ def bp(images, labels, alpha):
     bias2_g = np.mean(bias2_gradient, 0)
     kernel1_g = np.mean(kernel1_gradient, 0)
     bias1_g = np.mean(bias1, 0)
+    # print(kernel1_g)
     output_weights -= alpha * output_weights_g
     output_bias -= alpha * output_bias_g
     fc_weights -= alpha * fc_weight_g
@@ -120,12 +145,38 @@ def bp(images, labels, alpha):
     bias1 -= alpha * bias1_g
 
 
+def predict(image, label):
+    image = image
+    conv1_result = convolution(image, kernel1, bias1)
+    conv1_act_result = ReLU(conv1_result)
+    pool1_result = max_pool(conv1_act_result)
+    conv2_result = convolution(pool1_result, kernel2, bias2)
+    conv2_act_result = ReLU(conv2_result)
+    pool2_result= max_pool(conv2_act_result)
+    vector = pool2_result.reshape(7 * 7 * 64, 1)
+    fc_result = np.matmul(fc_weights, vector) + fc_bias  # 1024 * 1
+    fc_act_result = ReLU(fc_result, True)
+    raw_output = np.matmul(output_weights, fc_act_result) + output_bias
+    output = softmax(raw_output)
+    p = 0
+    for i in range(10):
+        if output[i] > p:
+            p = output[i]
+            index = i
+    print('The probability of \'%d\' is %f. And the true label is %d' %(index, p, label))
+    return index
+
+
 def get_derivative(vector):
     result = vector + 0
     vector_shape = np.shape(vector)
     for i in range(vector_shape[0]):
         for j in range(vector_shape[1]):
-            result[i][j] = 1 if result[i][j] >= 0 else 0
+            if len(vector_shape) == 3:
+                for k in range(vector_shape[2]):
+                    result[i][j][k] = 1 if result[i][j][k] > 0 else 0
+            else:
+                result[i][j] = 1 if result[i][j] > 0 else 0
     return result
 
 
@@ -163,7 +214,7 @@ def convolution(data, kernels, bias=None):
     kernel_height = kernel_shape[3]
     if kernel_len != data_shape[0]:
         raise Exception('not match')
-    conv_image = np.random.randint(0, high=1, size=(kernel_count, data_height, data_width))
+    conv_image = np.random.random(size=(kernel_count, data_height, data_width))
     for i in range(kernel_count):
         kernel = kernels[i]
         result = 0
@@ -252,7 +303,7 @@ def max_pool(data):
     data_width = data_shape[2]
     data_height = data_shape[1]
     data_len = data_shape[0]
-    pooling_image = np.random.randint(0, high=1, size=(data_len, int(data_height / 2), int(data_width / 2)))
+    pooling_image = np.random.random(size=(data_len, int(data_height / 2), int(data_width / 2)))
     for i in range(data_len):
         for x in range(int(data_width / 2)):
             for y in range(int(data_height / 2)):
@@ -268,7 +319,7 @@ def ReLU(image, is_panel=False):
     if is_panel:
         image_width = image_shape[0]
         image_height = image_shape[1]
-        result = np.random.randint(0, 1, (image_width, image_height))
+        result = np.random.random((image_width, image_height))
         for i in range(image_width):
             for j in range(image_height):
                 result[i][j] = max(0, image[i][j])
@@ -276,7 +327,7 @@ def ReLU(image, is_panel=False):
     map_count = image_shape[0]
     image_height = image_shape[1]
     image_width = image_shape[2]
-    result = np.random.randint(0, 1, (map_count, image_height, image_width))
+    result = np.empty((map_count, image_height, image_width))
     for i in range(map_count):
         for j in range(image_height):
             for k in range(image_width):
@@ -290,7 +341,6 @@ def softmax(vector):
     count = len(result)
     su = 0
     for i in range(count):
-        print(result[i])
         result[i] = math.pow(math.e, -result[i])
         su += result[i]
     for i in range(count):
@@ -364,5 +414,6 @@ def function_test():
     print(t)
     print(max_pool(t))
 
-image = np.random.randint(0, 5, (1, 28, 28))
-bp(image, [1], 0.1)
+if __name__ == '__main__':
+    train()
+    test()
