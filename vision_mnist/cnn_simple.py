@@ -19,14 +19,14 @@ FC_WEIGHTS = 'fc_weights'
 FC_BIAS = 'fc_bias'
 OUTPUT_WEIGHTS = 'output_weights'
 OUTPUT_BIAS = 'output_bias'
-kernel1 = (np.random.random((32, 1, 3, 3)) - 0.5) / 10
-bias1 = (np.random.random(28 * 28 * 32) - 0.5) / 10
-kernel2 = (np.random.random((64, 32, 3, 3)) - 0.5) / 10
-bias2 = (np.random.random(14 * 14 * 64) - 0.5) / 10
-fc_weights = (np.random.random((1024, 7 * 7 * 64)) - 0.5) / 10
-fc_bias = (np.random.random((1024, 1)) - 0.5) / 10
-output_weights = (np.random.random((10, 1024)) - 0.5) / 10
-output_bias = (np.random.random((10, 1)) - 0.5) / 10
+kernel1 = (np.random.random((32, 1, 3, 3)) - 0.5) / 5
+bias1 = (np.random.random(28 * 28 * 32) - 0.5) / 5
+kernel2 = (np.random.random((64, 32, 3, 3)) - 0.5) / 5
+bias2 = (np.random.random(14 * 14 * 64) - 0.5) / 5
+fc_weights = (np.random.random((1024, 7 * 7 * 64)) - 0.5) / 5
+fc_bias = (np.random.random((1024, 1)) - 0.5) / 5
+output_weights = (np.random.random((10, 1024)) - 0.5) / 5
+output_bias = (np.random.random((10, 1)) - 0.5) / 5
 
 
 def train():
@@ -37,14 +37,14 @@ def train():
     print('Reading the data set...')
     training_set, training_labels = loader.get_training_set(True)
     print('Start training...')
-    batch_size = 50
+    batch_size = 30
     count = int(len(training_labels) / batch_size)
     alpha = 0.1
     for i in range(count):
         start = time.time()
         # if i % 100:
         print(i)
-        index = (i + 20) * batch_size
+        index = i * batch_size
         images = training_set[index: index + batch_size]
         labels = training_labels[index: index + batch_size]
         # image = np.random.randint(0, 5, (1, 28, 28))
@@ -167,6 +167,7 @@ def predict(image, label):
     raw_output = np.matmul(output_weights, fc_act_result) + output_bias
     output = softmax(raw_output)
     p = 0
+    index = 0
     for i in range(10):
         if output[i] > p:
             p = output[i]
@@ -447,4 +448,6 @@ if __name__ == '__main__':
     # bp([image], [1], 0.1)
     # print(time.time() - start)
     train()
-    test()
+    # test()
+    # try_read_params()
+    # print(kernel1)

@@ -39,6 +39,26 @@ class MnistLoader:
                         image[i][j] = (int)(85 + value) / 85
         return self.train_images, self.train_labels
 
+    def get_united_training_set(self, binary=False):
+        train_images = self._get_images_from_file(os.path.join(self.base_path, 'mnist/mnist-train-images-ubyte'))
+        train_labels = self._get_labels_from_file(os.path.join(self.base_path, 'mnist/mnist-train-labels-ubyte'))
+        if not len(self.train_images) == len(self.train_labels):
+            print('The count of images is '), len(self.train_images)
+            print('The count of labels is '), len(self.train_labels)
+            raise Exception('The count of images doesn\'t equals with labels!')
+        if binary:
+            shape = np.shape(train_images[0])
+            for image in train_images:
+                for i in range(shape[0]):
+                    for j in range(shape[1]):
+                        if image[i][j] > 0:
+                            image[i][j] = 1
+        count = len(train_labels)
+        result = []
+        for i in range(count):
+            result.append((train_images[i], train_labels[i]))
+        return result
+
     def get_test_set(self, grayscale=False):
         if self.test_images and self.test_labels:
             return self.test_images, self.test_labels
@@ -61,6 +81,26 @@ class MnistLoader:
                             value -= 1
                         image[i][j] = (int)(85 + value) / 85
         return self.test_images, self.test_labels
+
+    def get_united_test_set(self, binary=False):
+        test_images = self._get_images_from_file(os.path.join(self.base_path, 'mnist/mnist-test-10k-images-ubyte'))
+        test_labels = self._get_labels_from_file(os.path.join(self.base_path, 'mnist/mnist-test-10k-labels-ubyte'))
+        if not len(self.test_images) == len(self.test_labels):
+            print('The count of test-images is '), len(self.test_images)
+            print('The count of test-labels is '), len(self.test_labels)
+            raise Exception('The count of test-images doesn\'t equals with test-labels!')
+        if binary:
+            shape = np.shape(test_images[0])
+            for image in test_images:
+                for i in range(shape[0]):
+                    for j in range(shape[1]):
+                        if image[i][j] > 0:
+                            image[i][j] = 1
+        count = len(test_labels)
+        result = []
+        for i in range(count):
+            result.append((test_images[i], test_labels[i]))
+        return result
 
     def get_all_set(self):
         train_images, train_labels = self.get_training_set()

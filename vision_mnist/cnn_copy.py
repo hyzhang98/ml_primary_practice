@@ -445,11 +445,13 @@ if __name__ == '__main__':
     # print(time.time() - start)
     # train()
     try_read_params()
-    # test()
-    test_set, test_labels = data_loader.MnistLoader().get_test_set(True)
-    images = test_set[0: 30]
-    labels = test_labels[0: 30]
-    bp(images, labels, 0.1)
-    bp(images, labels, 0.1)
-    bp(images, labels, 0.1)
-    bp(images, labels, 0.1)
+    # print(kernel1)
+    # print(kernel2)
+    test()
+    # test_set, test_labels = data_loader.MnistLoader().get_test_set(True)
+    # images = test_set[0: 30]
+    # labels = test_labels[0: 30]
+    # bp(images, labels, 0.1)
+    # bp(images, labels, 0.1)
+    # bp(images, labels, 0.1)
+    # bp(images, labels, 0.1)
