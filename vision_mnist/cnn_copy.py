@@ -1,6 +1,5 @@
 if __name__ == '__main__':
     import sys
-
     sys.path.append('/Users/hyzhang/MachineLearning/python/primary_practice')
 from data import data_loader
 import numpy as np
@@ -9,6 +8,7 @@ import pickle
 import os
 import time
 from scipy import signal
+
 
 PARAMS_FILE = 'nn_params'
 KERNEL1 = 'kernel1'
@@ -36,28 +36,25 @@ def train():
     loader = data_loader.MnistLoader()
     print('Reading the data set...')
     training_set, training_labels = loader.get_training_set(True)
-    print('Start training...')
-    batch_size = 50
+    print('Start trainging...')
+    batch_size = 100
     count = int(len(training_labels) / batch_size)
     alpha = 0.1
-    for i in range(count):
+    for i in range(10):
         start = time.time()
         # if i % 100:
         print(i)
-        index = (i + 20) * batch_size
+        index = (i + 3) * batch_size
         images = training_set[index: index + batch_size]
         labels = training_labels[index: index + batch_size]
         # image = np.random.randint(0, 5, (1, 28, 28))
         # images = np.array([image])
         # labels = np.array([1])
         bp(images, labels, alpha)
-        print('Wasted time is %f' % ((time.time() - start) / 60))
-        if i % 100 == 0:
-            alpha -= 0.001
-        if i % 20 == 0:
-            save()
+        print('Wasted time is %d' % ((time.time() - start)/60))
+        # alpha -= 0.006
     save()
-
+    
 
 def test():
     loader = data_loader.MnistLoader()
@@ -68,7 +65,7 @@ def test():
         prediction = predict(test_set[i], test_labels[i])
         if prediction == test_labels[i]:
             right_count += 1
-    print('The accuracy is %f' % (right_count / count))
+    print('The accuracy is %f' %(right_count / count))
 
 
 def bp(images, labels, alpha):
@@ -102,9 +99,14 @@ def bp(images, labels, alpha):
         raw_output = np.matmul(output_weights, fc_act_result[i]) + output_bias
         output.append(softmax(raw_output))
     output_error = np.empty(10)
+    error = 0
+    for i in range(count):
+        label = labels[i]
+        error += (-math.log(output[i][label]) / count)
+    print(error)
     for j in range(count):
         for i in range(10):
-            output_error[i] += ((output[j][i]) + (-1 if i == labels[j] else 0)) * (1 / count)
+            output_error[i] = ((output[j][i]) + (-1 if i == labels[j] else 0)) * (1 / count)
     output_weight_gradient = []
     output_bias_gradient = []
     fc_weight_gradient = []
@@ -123,14 +125,11 @@ def bp(images, labels, alpha):
         fc_weight_gradient.append(np.matmul(fc_error, vector.T))
         fc_bias_gradient.append(fc_error)
         pool2_error = np.matmul(fc_weights.T, fc_error)  # (7 * 7 * 64) * 1
-        conv2_error = get_conv_error(conv2_act_result[i], pool2_result[i], pool2_error) * get_derivative(
-            conv2_act_result[i])  # 64 * 14 * 14
+        conv2_error = get_conv_error(conv2_act_result[i], pool2_result[i], pool2_error) * get_derivative(conv2_act_result[i])  # 64 * 14 * 14
         kernel2_gradient.append(get_kernel_derivative(conv2_error, pool1_result[i]))  # 64 * 32 * 3 * 3
         bias2_gradient.append(conv2_error.reshape(14 * 14 * 64))
-        pool1_error = back_conv(conv2_error, kernel2)  # 32 * 14 * 14
-        # pool1_error = back_conv(conv2_error, flip(kernel2))  # 32 * 14 * 14
-        conv1_error = get_conv_error(conv1_act_result[i], pool1_result[i], pool1_error) * get_derivative(
-            conv1_act_result[i])  # 32 * 28 * 28
+        pool1_error = back_conv(conv2_error, flip(kernel2))  # 32 * 14 * 14
+        conv1_error = get_conv_error(conv1_act_result[i], pool1_result[i], pool1_error) * get_derivative(conv1_act_result[i])  # 32 * 28 * 28
         kernel1_gradient.append(get_kernel_derivative(conv1_error, images[i]))  # 32 * 1 * 28 * 28
         bias1_gradient.append(conv1_error.reshape(28 * 28 * 32))
     output_weights_g = np.mean(output_weight_gradient, axis=0)
@@ -160,18 +159,19 @@ def predict(image, label):
     pool1_result = max_pool(conv1_act_result)
     conv2_result = convolution(pool1_result, kernel2, bias2)
     conv2_act_result = ReLU(conv2_result)
-    pool2_result = max_pool(conv2_act_result)
+    pool2_result= max_pool(conv2_act_result)
     vector = pool2_result.reshape(7 * 7 * 64, 1)
     fc_result = np.matmul(fc_weights, vector) + fc_bias  # 1024 * 1
     fc_act_result = ReLU(fc_result, True)
     raw_output = np.matmul(output_weights, fc_act_result) + output_bias
     output = softmax(raw_output)
     p = 0
+    index = 0
     for i in range(10):
         if output[i] > p:
             p = output[i]
             index = i
-    print('The probability of \'%d\' is %f. And the true label is %d' % (index, p, label))
+    print('The probability of \'%d\' is %f. And the true label is %d' %(index, p, label))
     return index
 
 
@@ -200,8 +200,7 @@ def get_conv_error(conv_result, pool_result, error):
             for j in range(pool_width):
                 for x in range(2):
                     for y in range(2):
-                        result[k][i * 2 + x][j * 2 + y] = e[k][i][j] if pool_result[k][i][j] == \
-                                                                        conv_result[k][i * 2 + x][j * 2 + y] else 0
+                        result[k][i * 2 + x][j * 2 + y] = e[k][i][j] if pool_result[k][i][j] == conv_result[k][i * 2 + x][j * 2 + y] else 0
     return result
 
 
@@ -209,7 +208,7 @@ def flip(kernels):
     return np.flip(np.flip(kernels, -1), -2)
 
 
-def convolution(data, kernels, bias=None, flipped=False):
+def convolution(data, kernels, bias=None):
     data_shape = np.shape(data)
     if len(data_shape) < 3:
         data = data.reshape(1, data_shape[0], data_shape[1])
@@ -226,10 +225,7 @@ def convolution(data, kernels, bias=None, flipped=False):
         for i in range(kernel_count):
             conv = np.zeros((data_height, data_width))
             for j in range(kernel_len):
-                if flipped:
-                    conv += signal.convolve2d(data[j], kernels[i][j], mode='same')
-                else:
-                    conv += signal.correlate2d(data[j], kernels[i][j], mode='same')
+                conv += signal.correlate2d(data[j], kernels[i][j], mode='same')
             conv_image[i] = conv
         b = 0
         if bias is not None:
@@ -273,7 +269,7 @@ def back_conv(error, flipped_kernel):
     for i in range(kernel_count):
         for j in range(kernel_channel):
             kernel[j][i] = flipped_kernel[i][j]
-    return convolution(error, kernel, flipped=True)
+    return convolution(error, kernel)
 
 
 def get_kernel_derivative(error, output):
@@ -292,7 +288,7 @@ def get_kernel_derivative(error, output):
             for x in range(-1, 2):
                 for y in range(-1, 2):
                     kernel = shift(output[j], x, y)
-                    result[i][j][x + 1][y + 1] = signal.convolve2d(error[j], kernel, 'valid')
+                    result[i][j][x+1][y+1] = signal.convolve2d(error[j], kernel, 'valid')
                     # result[i][j][x+1][y+1] = conv_2d(error[j], kernel)
     return result
 
@@ -362,9 +358,9 @@ def ReLU(image, is_panel=False):
 def softmax(vector):
     vector_shape = np.shape(vector)
     result = vector.reshape(vector_shape[0] * vector_shape[1])
-    count = len(result)
     maxima = max(result)
     result -= maxima
+    count = len(result)
     su = 0
     for i in range(count):
         result[i] = math.pow(math.e, result[i])
@@ -440,11 +436,20 @@ def function_test():
     print(t)
     print(max_pool(t))
 
-
 if __name__ == '__main__':
     # image = np.random.randint(0, 5, (28, 28))
     # start = time.time()
     # bp([image], [1], 0.1)
+    # bp([image], [1], 0.1)
+    # bp([image], [1], 0.1)
     # print(time.time() - start)
-    train()
-    test()
+    # train()
+    try_read_params()
+    # test()
+    test_set, test_labels = data_loader.MnistLoader().get_test_set(True)
+    images = test_set[0: 30]
+    labels = test_labels[0: 30]
+    bp(images, labels, 0.1)
+    bp(images, labels, 0.1)
+    bp(images, labels, 0.1)
+    bp(images, labels, 0.1)
