@@ -40,8 +40,8 @@ def train():
     batch_size = 30
     size = len(training_labels)
     # count = int(len(training_labels) / batch_size)
-    count = 900
-    alpha = 0.1
+    count = 700
+    alpha = 0.15
     for i in range(count):
         start = time.time()
         # if i % 100:
@@ -49,16 +49,16 @@ def train():
         images = []
         labels = []
         indeces = np.random.randint(0, size, batch_size)
-        for i in indeces:
-            images.append(training_set[i])
-            labels.append(training_labels[i])
+        for j in indeces:
+            images.append(training_set[j])
+            labels.append(training_labels[j])
         # index = (count - 1 - i) * batch_size
         # images = training_set[index: index + batch_size]
         # labels = training_labels[index: index + batch_size]
         bp(images, labels, alpha)
         print('Wasted time is %f' % ((time.time() - start) / 60))
-        if i % 100 == 0:
-            alpha -= 0.001
+        if i % 50 == 0:
+            alpha -= 0.0035
         if i % 20 == 0:
             save()
     save()
