@@ -5,14 +5,16 @@ from scipy import stats
 
 
 class CART:
-    def __init__(self, training_set):
+    def __init__(self, training_set, features, params_file_name='CART_tree'):
         self.training_set = training_set
         self.root = None
         self.training_set_size = len(training_set)
+        self.params_file_name = params_file_name
+        self.features = features
 
     def train(self):
-        self.build(None, list(range(28*28)), self.training_set, True, 10)
-        f = open('CART_tree', 'wb')
+        self.build(None, self.features, self.training_set, True, 10)
+        f = open(self.params_file_name, 'wb')
         pickle.dump(self.root, f)
         f.close()
 
@@ -161,7 +163,7 @@ if __name__ == '__main__':
     count = len(data_set)
     for i in range(count):
         data_set[i] = (data_set[i][0].reshape(28 * 28), data_set[i][1])
-    tree = CART(data_set)
+    tree = CART(data_set, list(range(0, 28*28)))
     # tree.train()
     f = open('CART_tree', 'rb')
     root = pickle.load(f)

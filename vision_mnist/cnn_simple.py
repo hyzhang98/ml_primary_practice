@@ -38,18 +38,23 @@ def train():
     training_set, training_labels = loader.get_training_set(True)
     print('Start training...')
     batch_size = 30
-    count = int(len(training_labels) / batch_size)
+    size = len(training_labels)
+    # count = int(len(training_labels) / batch_size)
+    count = 900
     alpha = 0.1
     for i in range(count):
         start = time.time()
         # if i % 100:
         print(i)
-        index = i * batch_size
-        images = training_set[index: index + batch_size]
-        labels = training_labels[index: index + batch_size]
-        # image = np.random.randint(0, 5, (1, 28, 28))
-        # images = np.array([image])
-        # labels = np.array([1])
+        images = []
+        labels = []
+        indeces = np.random.randint(0, size, batch_size)
+        for i in indeces:
+            images.append(training_set[i])
+            labels.append(training_labels[i])
+        # index = (count - 1 - i) * batch_size
+        # images = training_set[index: index + batch_size]
+        # labels = training_labels[index: index + batch_size]
         bp(images, labels, alpha)
         print('Wasted time is %f' % ((time.time() - start) / 60))
         if i % 100 == 0:
@@ -101,7 +106,7 @@ def bp(images, labels, alpha):
         fc_act_result.append(ReLU(fc_result, True))
         raw_output = np.matmul(output_weights, fc_act_result[i]) + output_bias
         output.append(softmax(raw_output))
-    output_error = np.empty(10)
+    output_error = np.zeros(10)
     for j in range(count):
         for i in range(10):
             output_error[i] += ((output[j][i]) + (-1 if i == labels[j] else 0)) * (1 / count)

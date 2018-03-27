@@ -8,6 +8,7 @@ import pickle
 import os
 import time
 from scipy import signal
+import random
 
 
 PARAMS_FILE = 'nn_params'
@@ -58,7 +59,7 @@ def train():
 
 def test():
     loader = data_loader.MnistLoader()
-    test_set, test_labels = loader.get_test_set()
+    test_set, test_labels = loader.get_test_set(True)
     count = len(test_set)
     right_count = 0
     for i in range(count):
@@ -66,6 +67,22 @@ def test():
         if prediction == test_labels[i]:
             right_count += 1
     print('The accuracy is %f' %(right_count / count))
+
+
+def test_1000(use_test=True):
+    loader = data_loader.MnistLoader()
+    if use_test:
+        test_set, test_labels = loader.get_test_set(True)
+    else:
+        test_set, test_labels = loader.get_training_set(True)
+    right_count = 0
+    count = len(test_labels)
+    for i in range(1000):
+        index = random.randint(0, count-1)
+        prediction = predict(test_set[index], test_labels[index])
+        if prediction == test_labels[index]:
+            right_count += 1
+    print('The accuracy is %f' % (right_count / 1000))
 
 
 def bp(images, labels, alpha):
@@ -98,7 +115,7 @@ def bp(images, labels, alpha):
         fc_act_result.append(ReLU(fc_result, True))
         raw_output = np.matmul(output_weights, fc_act_result[i]) + output_bias
         output.append(softmax(raw_output))
-    output_error = np.empty(10)
+    output_error = np.zeros(10)
     error = 0
     for i in range(count):
         label = labels[i]
@@ -436,6 +453,7 @@ def function_test():
     print(t)
     print(max_pool(t))
 
+
 if __name__ == '__main__':
     # image = np.random.randint(0, 5, (28, 28))
     # start = time.time()
@@ -447,10 +465,11 @@ if __name__ == '__main__':
     try_read_params()
     # print(kernel1)
     # print(kernel2)
-    test()
+    # test()  # The accuracy is 0.668900
+    test_1000()
     # test_set, test_labels = data_loader.MnistLoader().get_test_set(True)
-    # images = test_set[0: 30]
-    # labels = test_labels[0: 30]
+    # images = test_set[0: 10]
+    # labels = test_labels[0: 10]
     # bp(images, labels, 0.1)
     # bp(images, labels, 0.1)
     # bp(images, labels, 0.1)
