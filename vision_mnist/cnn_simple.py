@@ -9,6 +9,7 @@ import pickle
 import os
 import time
 from scipy import signal
+import random
 
 PARAMS_FILE = 'nn_params'
 KERNEL1 = 'kernel1'
@@ -39,19 +40,26 @@ def train():
     print('Start training...')
     batch_size = 30
     size = len(training_labels)
-    # count = int(len(training_labels) / batch_size)
-    count = 700
-    alpha = 0.15
+    # count = 40
+    count = 60
+    # alpha = 0.06
+    alpha = 0.08
+    # f = open('neg_samples', 'rb')
+    # offsets = pickle.load(f)
+    # f.close()
     for i in range(count):
         start = time.time()
-        # if i % 100:
         print(i)
         images = []
         labels = []
         indeces = np.random.randint(0, size, batch_size)
+        # indeces = np.random.randint(0, 1000, batch_size)
         for j in indeces:
             images.append(training_set[j])
             labels.append(training_labels[j])
+        # for j in indeces:
+        #     images.append(training_set[offsets[j]])
+        #     labels.append(training_labels[offsets[j]])
         # index = (count - 1 - i) * batch_size
         # images = training_set[index: index + batch_size]
         # labels = training_labels[index: index + batch_size]
@@ -59,7 +67,7 @@ def train():
         print('Wasted time is %f' % ((time.time() - start) / 60))
         if i % 50 == 0:
             alpha -= 0.0035
-        if i % 20 == 0:
+        if i % 10 == 0:
             save()
     save()
 
@@ -418,33 +426,20 @@ def try_read_params():
     return True
 
 
-def function_test():
-    data = [[[1, 2, 3],
-             [4, 5, 6],
-             [7, 8, 9]],
-            [[-1, -2, -3],
-             [-4, -5, -6],
-             [-7, -8, -9]]]
-    data = [[[1, 2, 3, 1],
-             [4, 5, 6, 4],
-             [7, 8, 9, 7],
-             [10, 11, 12, 10]]]
-    data = np.array(data)
-    kernel = [[[[1, 0, 0],
-                [0, 1, 0],
-                [0, 0, 1]],
-               [[1, 0, 0],
-                [0, 1, 0],
-                [0, 0, 1]]]]
-    kernel = [[[[1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, 1, 0],
-                [0, 0, 0, 1]]]]
-    bias = [-1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, -12, -13, -14, -15, -16]
-    kernel = np.array(kernel)
-    t = convolution(data, kernel, bias)
-    print(t)
-    print(max_pool(t))
+def test_1000(use_test=True):
+    loader = data_loader.MnistLoader()
+    if use_test:
+        test_set, test_labels = loader.get_test_set(True)
+    else:
+        test_set, test_labels = loader.get_training_set(True)
+    right_count = 0
+    count = len(test_labels)
+    for i in range(1000):
+        index = random.randint(0, count-1)
+        prediction = predict(test_set[index], test_labels[index])
+        if prediction == test_labels[index]:
+            right_count += 1
+    print('The accuracy is %f' % (right_count / 1000))
 
 
 if __name__ == '__main__':
